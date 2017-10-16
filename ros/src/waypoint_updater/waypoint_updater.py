@@ -5,6 +5,7 @@ from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 
 import math
+import tf
 
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
@@ -38,15 +39,49 @@ class WaypointUpdater(object):
 
         # TODO: Add other member variables you need below
 
+	self.pose = None        
+        self.wpts = None
+        self.future_waypoints = None
+
         rospy.spin()
 
     def pose_cb(self, msg):
-        # TODO: Implement
-        pass
+        quaternion = (msg.pose.orientation.x,
+                        msg.pose.orientation.y,
+                        msg.pose.orientation.z,
+                        msg.pose.orientation.w)
+        euler = tf.transformations.euler_from_quaternion(quaternion)
+        car_roll = euler[0]
+        car_pitch = euler[1]
+        car_yaw = euler[2]
+        car_x = msg.pose.position.x
+        car_y = msg.pose.position.y
+        self.pose = [car_x, car_y, car_yaw]     
+        rospy.loginfo("curent pose  (%s, %s, %s)", car_x, car_y, car_yaw)
+        rospy.loginfo("future waypoints %s", self.wpts.waypoints[0])
+        future_wpts = []
+        if (self.wpts is not None):
+		for pt in self.wpts.waypoints:
+			if car_x <= pt.pose.pose.position.x:
+                                future_wpts.append(pt)
+                                if len(future_wpts) > (LOOKAHEAD_WPS - 1):
+                                        self.future_waypoints = future_wpts
+                                        break
+                now = rospy.get_rostime()
+                final_pts = Lane()
+                final_pts.header.stamp.secs = now.secs
+                final_pts.header.stamp.nsecs = now.nsecs
+                final_pts.header.frame_id = "Our World"
+                final_pts.waypoints = self.future_waypoints
+                self.final_waypoints_pub.publish(final_pts)
+
+        return
 
     def waypoints_cb(self, waypoints):
-        # TODO: Implement
-        pass
+        if (self.wpts is None):
+                self.wpts = waypoints
+                rospy.loginfo("Obtained Base_Waypoints %s", len(self.wpts.waypoints))
+	return
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
