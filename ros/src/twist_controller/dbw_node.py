@@ -54,11 +54,28 @@ class DBWNode(object):
                                          BrakeCmd, queue_size=1)
 
         # TODO: Create `TwistController` object
-        # self.controller = TwistController(<Arguments you wish to provide>)
+        self.controller = Controller(decel_limit=decel_limit, accel_limit=accel_limit, 
+                                        wheel_radius=wheel_radius, wheel_base=wheel_base, 
+                                        max_lat_accel=max_lat_accel, 
+                                        max_steer_angle=max_steer_angle,
+                                        steer_ratio=steer_ratio)
+
 
         # TODO: Subscribe to all the topics you need to
+	
+	rospy.Subscriber('/twist_cmd',TwistStamped, self.twist_cmd_cb)
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
+        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_enable_cb)
+	
+	self.current_velocity = None
+        self.previous_velocity = None
+        self.update_velocity = None
+        self.dbw_enable = False 
+
 
         self.loop()
+
+	
 
     def loop(self):
         rate = rospy.Rate(50) # 50Hz
@@ -73,6 +90,18 @@ class DBWNode(object):
             # if <dbw is enabled>:
             #   self.publish(throttle, brake, steer)
             rate.sleep()
+    
+    def current_velocity_cb(self, msg):
+        self.current_velocity = msg.twist
+        return
+
+    def twist_cmd_cb(self, msg):
+        self.update_velocity = msg.twist
+        return
+
+    def dbw_enable_cb(self, msg):
+        self.dbw_enable = msg
+	return
 
     def publish(self, throttle, brake, steer):
         tcmd = ThrottleCmd()
