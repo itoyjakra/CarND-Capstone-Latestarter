@@ -25,21 +25,25 @@ class Controller(object):
     def control(self, proposed_linear_velocity, proposed_angular_velocity, 
 		current_linear_velocity, dbw_enabled):
         # TODO: Change the arg, kwarg list to suit your needs
-	steer = self.yaw_controller.get_steering(proposed_linear_velocity, 
+	throttle = 0.0
+	brake = 0.0
+	steer = 0.0
+	if (current_linear_velocity is not None):
+		steer = self.yaw_controller.get_steering(proposed_linear_velocity, 
 						proposed_angular_velocity,
 						current_linear_velocity)
-	steer = self.pid_steer.step(steer, self.sample_time)
-	speed_diff = sqrt(proposed_linear_velocity.x**2 + proposed_linear_velocity.y**2) - sqrt(current_linear_velocity.x**2 + current_linear_velocity.y**2)
-	throttle = self.pid_speed(speed_diff, self.sample_time)
-	if throttle < 0.0:
-		brake = throttle
-		throttle = 0
-	else:
-		brake = 0
+		steer = self.pid_steer.step(steer, self.sample_time)
+		speed_diff = sqrt(proposed_linear_velocity.x**2 + proposed_linear_velocity.y**2) - sqrt(current_linear_velocity.x**2 + current_linear_velocity.y**2)
+		throttle = self.pid_speed.step(speed_diff, self.sample_time)
+		if throttle < 0.0:
+			brake = abs(throttle)
+			throttle = 0
+		else:
+			brake = 0
 
-	if not dbw_enabled:
-		self.pid_speed.reset()
-		self.pid_steer.reset()
+		if not dbw_enabled:
+			self.pid_speed.reset()
+			self.pid_steer.reset()
 
         # Return throttle, brake, steer
-        return 1., 0., 0.
+        return throttle, brake, steer

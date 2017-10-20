@@ -67,7 +67,7 @@ class DBWNode(object):
 	self.proposed_linear_velocity = None
         self.proposed_angular_velocity = None
         self.current_linear_velocity = None
-        self.dbw_enabled = False 
+        self.dbw_enabled = True 
 
 
         self.loop()
@@ -84,8 +84,8 @@ class DBWNode(object):
                                                                self.current_linear_velocity,
                                                                self.dbw_enabled)
                                                                  
-            # if dbw_enabled:
-            #   self.publish(throttle, brake, steer)
+            if self.dbw_enabled:
+		self.publish(throttle, brake, steering)
             rate.sleep()
     
     def current_velocity_cb(self, msg):
@@ -98,7 +98,7 @@ class DBWNode(object):
         return
 
     def dbw_enable_cb(self, data):
-        self.dbw_enable = data
+        self.dbw_enable = data.data
 	return
 
     def publish(self, throttle, brake, steer):
