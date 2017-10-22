@@ -5,11 +5,12 @@ from geometry_msgs.msg import PoseStamped, Pose
 from styx_msgs.msg import TrafficLightArray, TrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
+from cv_bridge import CvBridge, CvBridgeError
 from light_classification.tl_classifier import TLClassifier
 import tf
 import cv2
 import yaml
+import numpy as np
 
 STATE_COUNT_THRESHOLD = 3
 
@@ -70,6 +71,42 @@ class TLDetector(object):
         """
         self.has_image = True
         self.camera_image = msg
+
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            #rospy.loginfo('image size = %s', cv_image.shape)
+            red = cv_image[:,:,2]
+            hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
+            lower_red = np.array([0,100,100])
+            upper_red = np.array([10,255,255])
+            mask1 = cv2.inRange(hsv, lower_red, upper_red)
+            lower_red = np.array([160,100,100])
+            upper_red = np.array([179,255,255])
+            mask2 = cv2.inRange(hsv, lower_red, upper_red)
+            mask = cv2.bitwise_or(mask1, mask2)
+            res = cv2.bitwise_and(cv_image, cv_image, mask= mask)
+            res_bgr = cv2.cvtColor(res, cv2.COLOR_HSV2BGR)
+            res_mono = cv2.cvtColor(res_bgr, cv2.COLOR_BGR2GRAY)
+            circles = cv2.HoughCircles(res_mono, cv2.HOUGH_GRADIENT, dp=1, minDist=20, minRadius=5, param1=1, param2=20)
+            #print('number of circles = {}'.format(circles.shape))
+            if circles is not None:
+                circles = np.uint16(np.around(circles))
+                for index, i in enumerate(circles[0,:]):
+                    # draw the outer circle
+                    #cv2.circle(cimg,(i[0],i[1]),i[2],(0,255,0),2)
+                    print('circle: ', index, i[0], i[1], i[2])
+            #print('max, min of red = {}, {}'.format(np.amax(red), np.amin(red)))
+            #print('argmax0, argmax1 of red = {}, {}'.format(np.argmax(red, axis=0), np.argmax(red, axis=1)))
+            #print(len(np.argmax(red, axis=0)))
+            #if np.amax(red) > 250:
+            #    print('red light detected')
+            #else:
+            #    print('no red light')
+        except CvBridgeError as e:
+            print(e)
+        #cv2.imshow("Image window", cv_image)
+        cv2.imshow("Image window", res_mono)
+        cv2.waitKey(3)
         light_wp, state = self.process_traffic_lights()
 
         '''

@@ -3,6 +3,7 @@
 import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 
 import math
 
@@ -32,21 +33,51 @@ class WaypointUpdater(object):
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
+        #rospy.Subscriber('/current_pose', PoseStamped, self.traffic_cb)
 
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
         # TODO: Add other member variables you need below
 
+        self.wpts = None
+
         rospy.spin()
 
     def pose_cb(self, msg):
         # TODO: Implement
-        pass
+        rospy.loginfo('position = x:%s, y:%s, z:%s', msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
+        rospy.loginfo('orientation = x:%s, y:%s, z:%s, w:%s', msg.pose.orientation.x, 
+                msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w)
+        if self.wpts is not None:
+            rospy.loginfo('array size = %s', len(self.wpts.waypoints))
+            num_forward_waypoints = 0
+            forward_waypoints = []
+            for wp in self.wpts.waypoints:
+                if num_forward_waypoints == LOOKAHEAD_WPS:
+                    break
+                if wp.pose.pose.position.x > msg.pose.position.x:
+                    num_forward_waypoints += 1
+                    forward_waypoints.append(wp)
+
+            wp0 = forward_waypoints[0]
+            wp1 = forward_waypoints[-1]
+            rospy.loginfo('wp position 0 = x:%s, y:%s, z:%s', wp0.pose.pose.position.x, wp0.pose.pose.position.y, wp0.pose.pose.position.z)
+            rospy.loginfo('wp position -1 = x:%s, y:%s, z:%s', wp1.pose.pose.position.x, wp1.pose.pose.position.y, wp1.pose.pose.position.z)
+
+        # publish the future waypoints
+        
+        fwrd_wpts = Lane()
+        fwrd_wpts.header.stamp = rospy.Time.now()
+        fwrd_wpts.header.frame_id = "final_wps"
+        fwrd_wpts.waypoints = forward_waypoints
+
+        self.final_waypoints_pub.publish(fwrd_wpts)
 
     def waypoints_cb(self, waypoints):
-        # TODO: Implement
-        pass
+        if self.wpts is None:
+            self.wpts = waypoints
+            rospy.loginfo('array size = %s', len(self.wpts.waypoints))
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
