@@ -62,6 +62,8 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
+        # Create color masks
+        self.create_masks(self, image)
 
         # get the detected lights for the three colors
         for color in self.colors:
