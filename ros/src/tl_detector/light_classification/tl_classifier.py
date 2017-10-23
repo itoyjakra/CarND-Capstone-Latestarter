@@ -28,13 +28,13 @@ class TLClassifier(object):
         self.mask['red'] = cv2.bitwise_or(mask1, mask2)
 
         # create a green mask
-        lower_green = [60 - self.sensitivity, 100, 100]
-        upper_green = [60 + self.sensitivity, 255, 255]
+        lower_green = np.array([60 - self.sensitivity, 100, 100])
+        upper_green = np.array([60 + self.sensitivity, 255, 255])
         self.mask['green'] = cv2.inRange(hsv_img, lower_green, upper_green)
 
         # create a yellow mask
-        lower_yellow = [20 - self.sensitivity, 100, 100]
-        upper_yellow = [30 + self.sensitivity, 255, 255]
+        lower_yellow = np.array([20, 100, 100])
+        upper_yellow = np.array([30, 255, 255])
         self.mask['yellow'] = cv2.inRange(hsv_img, lower_yellow, upper_yellow)
 
     def detect_light(self, image, color):
@@ -63,12 +63,15 @@ class TLClassifier(object):
         """
         #TODO implement light color prediction
         # Create color masks
-        self.create_masks(self, image)
+        self.create_masks(image)
 
         # get the detected lights for the three colors
         for color in self.colors:
-            light_circles = self.detect_light(hsv_img, color)
+            light_circles = self.detect_light(image, color)
             if light_circles is not None:
+                print('detected color = ', color)
                 return self.colors.index(color)
+            else:
+                print('color not detected')
 
         return TrafficLight.UNKNOWN
