@@ -11,7 +11,6 @@ import cv2
 import numpy as np
 import yaml,math,sys
 
-STATE_COUNT_THRESHOLD = 1
 DETECT_DIST = 3600 # Dist**2 before next light to start image detection
 LIGHTS_TABLE = ['RED', 'YELLOW', 'GREEN', 'N/A', 'UNKNOWN'] # refer to styx_msgs/msg/TrafficLight.msg
 
@@ -27,7 +26,7 @@ class TLDetector(object):
         self.lights = []
 
         self.sim_testing = bool(rospy.get_param("~sim_testing", True))
-
+        self.state_count_threshold = 1 if self.sim_testing else 3
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         '''
@@ -55,10 +54,11 @@ class TLDetector(object):
         self.listener = tf.TransformListener()
 
         # Let the car stop in the very beginning
-        self.state_count = STATE_COUNT_THRESHOLD
+        self.state_count = self.state_count_threshold
         self.state = TrafficLight.RED 
         self.last_state = TrafficLight.UNKNOWN
         self.last_light_wp_id = -1
+        self.has_image = False
 
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb) 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
@@ -99,6 +99,9 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
+        if not self.has_image:
+            rospy.loginfo("TLDetector: image height %s, width %s", msg.height, msg.width)
+            sys.stdout.flush() 
         self.has_image = True
         self.camera_image = msg
 
@@ -123,7 +126,7 @@ class TLDetector(object):
         if self.state != state:
             self.state_count = 0
             self.state = state
-        elif self.state_count >= STATE_COUNT_THRESHOLD:
+        elif self.state_count >= self.state_count_threshold:
             self.last_state = self.state
             light_wp_id = light_wp_id if state == TrafficLight.RED else -1
             self.last_light_wp_id = light_wp_id
@@ -166,7 +169,11 @@ class TLDetector(object):
         if(not self.has_image):
             # self.prev_light_loc = None
             return TrafficLight.RED
+        
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "rgb8")
+        # Convert to 600*800 on real site
+        if self.camera_image.height != 600 or self.camera_image.width != 800:
+            cv_image = cv2.resize(cv_image, (600, 800), interpolation=cv2.INTER_AREA)
 
         #Get classification
         predicted_state = self.light_classifier.get_classification(cv_image)
@@ -284,7 +291,7 @@ class TLDetector(object):
         #                    and self.last_wp_id > 0.7 * wp_len
         is_car_wrap_2 = (next_id == 0) and self.last_wp_id >= self.stop_lights_wp_ids[-1]
         is_car_wrap = is_car_wrap_1 or is_car_wrap_2
-        if is_car_wrap:
+        if is_car_wrap and self.sim_testing:
             rospy.loginfo("TLDetector: Car is wrapping the starting point, logic reversed")
 
         cmp_result = self.stop_lights_wp_ids[next_id] <= self.last_wp_id
@@ -305,11 +312,15 @@ class TLDetector(object):
 
         light = self.lights[next_id] # shall we rely on the existence of this topic?
         #if next_id == 6 or next_id == 7:
-        #    rospy.loginfo("next_id %s, state %s, min_dist %s, cmp_result %s last_min_dist %s", next_id, state, min_dist, cmp_result, last_min_dist)
-        if state is not None and min_dist < DETECT_DIST and not cmp_result:  # publish -1 when still far away from the next light
-            
-            rospy.loginfo("TLDetector:: predicted %s, ground truth %s, next light id %s", LIGHTS_TABLE[state], LIGHTS_TABLE[light.state], next_id)
+        #rospy.loginfo("next_id %s, state %s, min_dist %s, cmp_result %s last_min_dist %s", next_id, state, min_dist, cmp_result, last_min_dist)
+        if state is not None and not self.sim_testing:
+            rospy.loginfo("TLDetector:: predicted %s, next light id %s", LIGHTS_TABLE[state], next_id)
             sys.stdout.flush()
+
+        if state is not None and min_dist < DETECT_DIST and not cmp_result:  # publish -1 when still far away from the next light
+            if self.sim_testing:
+                rospy.loginfo("TLDetector:: predicted %s, ground truth %s, next light id %s", LIGHTS_TABLE[state], LIGHTS_TABLE[light.state], next_id)
+                sys.stdout.flush()
             
             return self.stop_lights_wp_ids[next_id], state
         else:
