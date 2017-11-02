@@ -71,10 +71,10 @@ class TLDetector(object):
         self.has_image = True
         self.camera_image = msg
         # visualize the camera images
-        cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
-        _ =  self.light_classifier.get_classification(cv_image)
-        cv2.imshow("Image window", cv_image)
-        cv2.waitKey(3)
+        #cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        #_ =  self.light_classifier.get_classification(cv_image)
+        #cv2.imshow("Image window", cv_image)
+        #cv2.waitKey(3)
         ##
         light_wp, state = self.process_traffic_lights()
 

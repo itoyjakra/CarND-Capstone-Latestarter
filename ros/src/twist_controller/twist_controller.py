@@ -30,9 +30,10 @@ class Controller(object):
         prop_ang_vx, prop_ang_vy, prop_ang_vz = prop_ang_v
 
         steer = self.yawc.get_steering(prop_lin_vx, prop_ang_vz, curr_lin_vx)
-        delta_steer = steer - prop_ang_vz
+        #delta_steer = steer - prop_ang_vz
         #new_steer = self.pid_steer.step(delta_steer, 0.02)
-        new_steer = self.pid_steer.step(steer, 0.02)
-        rospy.loginfo('steer, delta_steer, new_steer = %s, %s, %s', steer, delta_steer, new_steer)
-        return 1.0, 0.0, new_steer
-        return 1., 0., 0.
+        #new_steer = self.pid_steer.step(steer, 0.02)
+        #rospy.loginfo('steer, delta_steer, new_steer = %s, %s, %s', steer, delta_steer, new_steer)
+        rospy.loginfo('pvx, pvz, cvx, steer_val = %s, %s, %s, %s', prop_lin_vx, prop_lin_vz, curr_lin_vx, steer)
+        return 1.0, 0.0, steer
+        return 0.5, 0., 0.
