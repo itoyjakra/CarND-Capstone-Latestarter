@@ -40,7 +40,7 @@ class WaypointUpdater(object):
 
         # TODO: Add other member variables you need below
 
-        self.wpts = None
+        self.all_wpts = None
 
         rospy.spin()
 
@@ -49,35 +49,40 @@ class WaypointUpdater(object):
         rospy.loginfo('position = x:%s, y:%s, z:%s', msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
         rospy.loginfo('orientation = x:%s, y:%s, z:%s, w:%s', msg.pose.orientation.x, 
                 msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w)
-        if self.wpts is not None:
-            rospy.loginfo('array size = %s', len(self.wpts.waypoints))
-            num_forward_waypoints = 0
-            forward_waypoints = []
-            for wp in self.wpts.waypoints:
-                if num_forward_waypoints == LOOKAHEAD_WPS:
-                    break
-                if wp.pose.pose.position.x > msg.pose.position.x:
-                    num_forward_waypoints += 1
-                    forward_waypoints.append(wp)
 
-            wp0 = forward_waypoints[0]
-            wp1 = forward_waypoints[-1]
-            rospy.loginfo('wp position 0 = x:%s, y:%s, z:%s', wp0.pose.pose.position.x, wp0.pose.pose.position.y, wp0.pose.pose.position.z)
-            rospy.loginfo('wp position -1 = x:%s, y:%s, z:%s', wp1.pose.pose.position.x, wp1.pose.pose.position.y, wp1.pose.pose.position.z)
+        assert self.all_wpts is not None
 
-        # publish the future waypoints
+        # find the closest waypoint from the vehicle
+
+        car_x = msg.pose.position.x
+        car_y = msg.pose.position.y
+        nearest_wp = None
+        nearest_wp_id = None
+        min_dist = 10000
+        for i, wp in enumerate(self.all_wpts.waypoints):
+            wp_x = wp.pose.pose.position.x
+            wp_y = wp.pose.pose.position.y
+            d = (car_x - wp_x)**2 + (car_y - wp_y)**2
+            if d < min_dist:
+                min_dist = d
+                nearest_wp = wp
+                nearest_wp_id = i
+
+        rospy.loginfo('min dist = %s, id = %s', min_dist, nearest_wp_id)
+
+        # populate publish the future waypoints
         
         fwrd_wpts = Lane()
         fwrd_wpts.header.stamp = rospy.Time.now()
         fwrd_wpts.header.frame_id = "final_wps"
-        fwrd_wpts.waypoints = forward_waypoints
+        fwrd_wpts.waypoints = self.all_wpts.waypoints[nearest_wp_id:]
 
         self.final_waypoints_pub.publish(fwrd_wpts)
 
     def waypoints_cb(self, waypoints):
-        if self.wpts is None:
-            self.wpts = waypoints
-            rospy.loginfo('array size = %s', len(self.wpts.waypoints))
+        if self.all_wpts is None:
+            self.all_wpts = waypoints
+            rospy.loginfo('array size = %s', len(self.all_wpts.waypoints))
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
