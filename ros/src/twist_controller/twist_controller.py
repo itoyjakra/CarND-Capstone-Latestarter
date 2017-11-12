@@ -39,7 +39,7 @@ class Controller(object):
             throttle = self.pid_throttle.step(error_speed, 0.02)
 
             steer = self.yawc.get_steering(prop_lin_vx, prop_ang_vz, curr_lin_vx)
-            steer = - 2 * steer
+            steer = 3 * steer
             #delta_steer = steer - prop_ang_vz
             #new_steer = self.pid_steer.step(delta_steer, 0.02)
             #new_steer = self.pid_steer.step(steer, 0.02)

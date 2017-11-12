@@ -75,7 +75,8 @@ class WaypointUpdater(object):
         fwrd_wpts = Lane()
         fwrd_wpts.header.stamp = rospy.Time.now()
         fwrd_wpts.header.frame_id = "final_wps"
-        fwrd_wpts.waypoints = self.all_wpts.waypoints[nearest_wp_id:]
+        fwrd_wpts.waypoints = self.all_wpts.waypoints[nearest_wp_id:nearest_wp_id+LOOKAHEAD_WPS]
+        rospy.loginfo('forward waypoints size = %s', len(fwrd_wpts.waypoints))
 
         self.final_waypoints_pub.publish(fwrd_wpts)
 
