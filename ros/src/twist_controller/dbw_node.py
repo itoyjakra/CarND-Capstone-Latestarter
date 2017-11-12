@@ -76,6 +76,7 @@ class DBWNode(object):
 
     def loop(self):
         rate = rospy.Rate(50) # 50Hz
+        rospy.loginfo('dbw enabled = %s', self.dbw_enabled)
 
         while not rospy.is_shutdown():
             rospy.loginfo('curr_lin_v = x:%s, y:%s, z:%s', self.curr_lin_v[0],self.curr_lin_v[1],self.curr_lin_v[2])
@@ -98,6 +99,7 @@ class DBWNode(object):
             #throttle = 0.4; brake = 0.0; steer = 0.0
             if self.dbw_enabled:
                self.publish(throttle, brake, steering)
+               rospy.loginfo('th, br, st = %s, %s, %s', throttle, brake, steering)
             rate.sleep()
 
     def enabled_cb(self, msg):
