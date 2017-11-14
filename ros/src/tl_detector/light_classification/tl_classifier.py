@@ -43,7 +43,7 @@ class TLClassifier(object):
         and returns center and radius of the light in the image
         """
 
-        assert color in self.colors
+        #assert color in self.colors
         res = cv2.bitwise_and(image, image, mask = self.mask[color])
         res_bgr = cv2.cvtColor(res, cv2.COLOR_HSV2BGR)
         res_mono = cv2.cvtColor(res_bgr, cv2.COLOR_BGR2GRAY)
@@ -71,7 +71,5 @@ class TLClassifier(object):
             if light_circles is not None:
                 print('detected color = ', color)
                 return self.colors.index(color)
-            else:
-                print('color not detected')
 
         return TrafficLight.UNKNOWN

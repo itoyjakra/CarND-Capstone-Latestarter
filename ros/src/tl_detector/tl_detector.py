@@ -171,7 +171,7 @@ class TLDetector(object):
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
         light_color =  self.light_classifier.get_classification(cv_image)
         
-        light = light_color < 4
+        light = light_color == 0 # < TrafficLight.UNKNOWN
 
         if light:
             #state = self.get_light_state(light)
@@ -191,7 +191,7 @@ class TLDetector(object):
                     light_wp_id = i
 
 
-            #rospy.loginfo('nearest lp dist = %s, id = %s', min_dist, light_wp_id)
+            rospy.loginfo('nearest lp dist = %s, id = %s', min_dist, light_wp_id)
             #rospy.loginfo("light_wp = %s", light_wp_id)
             return light_wp_id, light_color
 
